@@ -3,6 +3,21 @@
 code* front = nullptr;
 code* rear = nullptr;
 
+void destroyTree(Tree* root)
+{
+    if (root == nullptr)
+        return;
+
+    // Destroy left subtree
+    destroyTree(root->f);
+
+    // Destroy right subtree
+    destroyTree(root->r);
+
+    // Destroy current node
+    delete root;
+}
+
 bool isroot(Tree* node) {
     return node != nullptr && node -> f == nullptr && node->r == nullptr;
 };
@@ -21,6 +36,7 @@ int convertDecimalToBinary(int arr[], int decimal, int len) {
         arr[i] = decimal % 2;
         decimal /= 2;    
     }
+    return decimal;
 }
 
 bool isLeaf(Node* root)
@@ -184,15 +200,13 @@ void printCodesIntoFile(int fd2, struct Node* root,int t[], int top = 0){
         << root->character
         << " | Code length: "
         << top << '\n';
-        if (data -> k == 0) {
+        if (front == nullptr) {
             front = rear = data;
-            data -> k++;
         }
         else {
             rear->p = data;
-            rear = rear->p;
+            rear = data;
         }
-        
     }
 }
 
@@ -243,57 +257,71 @@ void compressFile(int fd1, int fd2, unsigned char a)
 }
 
 Tree* ReBuildHuffmanTree(int fd1, int size)
-{   
-    auto tree = new Tree{};
-    auto t = new Tree{};
+{
+    if (size <= 0 || size > 256)
+        return nullptr;
 
-    int i = 0, j, k;
-    tree = (Tree*)malloc(sizeof(Tree));
-    auto tree_temp = tree;
-    tree->f = NULL;
-    tree->r = NULL;
-    t = (Tree*)malloc(sizeof(Tree));
-    t->f = NULL;
-    t->r = NULL;
-    Tree record{};
+    // Create root
+    Tree* root = new Tree{};
 
-    int bin[MAX] {};
-    for (k = 0; k < size; k++) {
-        tree_temp = tree;
-        ExtractCodesFromFile(fd1,record);
-        int bin[MAX], bin_con[MAX];
-        for (i = 0; i < MAX; i++) {
-            bin[i] = bin_con[i] = 0;
-        }
-        convertDecimalToBinary(bin, t->dec, t->len);
-        for (i = 0; i < t->len; i++) {
-            bin_con[i] = bin[i];
+    for (int k = 0; k < size; k++)
+    {
+        // Read metadata
+        Tree record{};
+
+        if (!ExtractCodesFromFile(fd1, record))
+        {
+            destroyTree(root);
+            return nullptr;
         }
 
-        for (j = 0; j < t->len; j++) {
-            if (bin_con[j] == 0) {
-                if (tree_temp->f == NULL) {
-                    tree_temp->f
-                        = (Tree*)malloc(sizeof(Tree));
-                }
-                tree_temp = tree_temp->f;
+        // Validate metadata
+        if (record.len <= 0 ||
+            record.len > 31 ||
+            record.dec < 0)
+        {
+            destroyTree(root);
+            return nullptr;
+        }
+
+        // Convert decimal code into binary
+        int bin[MAX]{};
+
+        convertDecimalToBinary(
+            bin,
+            record.dec,
+            record.len
+        );
+
+        // Start at root
+        Tree* current = root;
+
+        // Reconstruct path
+        for (int j = 0; j < record.len; j++)
+        {
+            if (bin[j] == 0)
+            {
+                if (current->f == nullptr)
+                    current->f = new Tree{};
+
+                current = current->f;
             }
-            else if (bin_con[j] == 1) {
-                if (tree_temp->r == NULL) {
-                    tree_temp->r
-                        = (Tree*)malloc(sizeof(Tree));
-                }
-                tree_temp = tree_temp->r;
+            else
+            {
+                if (current->r == nullptr)
+                    current->r = new Tree{};
+
+                current = current->r;
             }
         }
-        tree_temp->g = t->g;
-        tree_temp->len = t->len;
-        tree_temp->dec = t->dec;
-        tree_temp->f = NULL;
-        tree_temp->r = NULL;
-        tree_temp = tree;
+
+        // Store character at leaf
+        current->g = record.g;
+        current->len = record.len;
+        current->dec = record.dec;
     }
-    return tree; 
+
+    return root;
 }
 
 void decompressFile(int fd1, int fd2, int f, Tree* root)
@@ -503,11 +531,7 @@ int main()
         _close(fd1);
         _close(fd2);
     }
-
-    // =====================================
-    // DECOMPRESSION
-    // =====================================
-
+    
     else if (choice == 2)
     {
         // STEP 1: Open compressed file
@@ -590,14 +614,13 @@ int main()
 
         // STEP 7: Destroy reconstructed tree
 
-        //destroyTree(root);
+        destroyTree(root);
 
         _close(fd1);
         _close(fd2);
     }
 
-    else
-    {
+    else {
         cout << "Invalid choice!\n";
         return 1;
     }
