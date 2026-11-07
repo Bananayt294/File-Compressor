@@ -6,7 +6,7 @@
 #include <sys/stat.h>
 #include <cstdlib>
 #include <cstdio>
-
+constexpr int MAX = 256;
 // Structure for tree nodes
 struct Node {
     char character;
@@ -51,3 +51,9 @@ typedef struct Tree {
     struct Tree* r;
 } Tree;
 
+void swap(Node*& a, Node*& b);
+void Heapify(Min_Heap* heap, int i);
+bool ExtractCodesFromFile(int fd1, Tree& record);
+
+extern code* front;
+extern code* rear;

@@ -1,5 +1,59 @@
 #include "compressor.hpp"
 
+code* front = nullptr;
+code* rear = nullptr;
+
+bool isroot(Tree* node) {
+    return node != nullptr && node -> f == nullptr && node->r == nullptr;
+};
+
+
+int convertBinaryToDecimal(int arr[], int len) {
+    int decimal = 0;
+    for (int i = 0; i < len; i++) {
+        decimal = decimal * 2 + arr[i];
+    }
+    return decimal;
+}
+
+int convertDecimalToBinary(int arr[], int decimal, int len) {
+    for (int i = len - 1; i >= 0; i--) {
+        arr[i] = decimal % 2;
+        decimal /= 2;    
+    }
+}
+
+bool isLeaf(Node* root)
+{
+    return root != nullptr &&
+           root->l == nullptr &&
+           root->r == nullptr;
+}
+
+void insertIntoMin_Heap(Min_Heap* heap, Node* node) {
+    int i = heap -> size;
+    heap -> array[i] = node;
+    heap -> size++;
+
+    while(i != 0 && heap -> array[(i - 1)/ 2] -> freq > heap -> array[i] -> freq) {
+        swap(heap -> array[i], heap -> array[(i - 1) / 2]);
+        i = (i - 1) / 2;
+    }
+}
+
+Node* extractMinFromMin_Heap(Min_Heap* heap) {
+    if (heap -> size <= 0) {
+        return nullptr;
+    }
+    Node* minNode = heap -> array[0];
+    heap ->array[0] = heap -> array[heap -> size - 1];
+    heap -> size--;
+    if (heap -> size > 0) {
+        Heapify(heap,0);
+    };
+    return minNode;
+}
+
 void swap(Node*& a, Node*& x) {
     Node* temp = a;
     a = x;
@@ -12,7 +66,7 @@ void Heapify(Min_Heap* x, int i) {
     int left = 2 * i + 1;
     int right = 2 * i + 2;
 
-    if (left < x -> size && x -> array[left]->freq < x -> array[smallest] -> freq); {
+    if (left < x -> size && x -> array[left]->freq < x -> array[smallest] -> freq) {
         smallest = left;
     }
     if (right < x -> size && x -> array[right] -> freq < x -> array[smallest] -> freq) {
@@ -69,7 +123,12 @@ Min_Heap* createAndBuildMin_Heap(char arr[], int freq[],
     return Heap;
 }
 
-is
+bool isSizeOne(Min_Heap* x) {
+    if (x -> size == 1) {
+        return true;
+    }
+    return false;
+}
 
 Node* buildHuffmanTree(char arr[], int freq[], int unique_size)
 {
@@ -93,9 +152,7 @@ Node* buildHuffmanTree(char arr[], int freq[], int unique_size)
     return extractMinFromMin_Heap(heap);
 }
 
-void printCodesIntoFile(int fd2, struct Node* root,
-                        int t[], int top = 0)
-{
+void printCodesIntoFile(int fd2, struct Node* root,int t[], int top = 0){
     int i;
     if (root->l) {
         t[top] = 0;
@@ -108,8 +165,8 @@ void printCodesIntoFile(int fd2, struct Node* root,
     }
 
     if (isLeaf(root)) {
-        data = (code*)malloc(sizeof(code));
-        tree = (Tree*)malloc(sizeof(Tree));
+        auto data = (code*)malloc(sizeof(code));
+        auto tree = (Tree*)malloc(sizeof(Tree));
         data->p = NULL;
         data->k = root->character;
         tree->g = root->character;
@@ -119,19 +176,23 @@ void printCodesIntoFile(int fd2, struct Node* root,
         }
         tree->len = top;
         write(fd2, &tree->len, sizeof(int));
-        tree->dec
-            = convertBinaryToDecimal(data->code_arr, top);
+        tree->dec = convertBinaryToDecimal(data->code_arr, top);
         write(fd2, &tree->dec, sizeof(int));
         data->l = top;
-        data->p = NULL;
-        if (k == 0) {
+        data->p = NULL; 
+        std::cout << "Writing character: "
+        << root->character
+        << " | Code length: "
+        << top << '\n';
+        if (data -> k == 0) {
             front = rear = data;
-            k++;
+            data -> k++;
         }
         else {
             rear->p = data;
             rear = rear->p;
         }
+        
     }
 }
 
@@ -181,19 +242,25 @@ void compressFile(int fd1, int fd2, unsigned char a)
     write(fd2, &a, sizeof(char));
 }
 
-void ReBuildHuffmanTree(int fd1, int size)
-{
+Tree* ReBuildHuffmanTree(int fd1, int size)
+{   
+    auto tree = new Tree{};
+    auto t = new Tree{};
+
     int i = 0, j, k;
     tree = (Tree*)malloc(sizeof(Tree));
-    tree_temp = tree;
+    auto tree_temp = tree;
     tree->f = NULL;
     tree->r = NULL;
     t = (Tree*)malloc(sizeof(Tree));
     t->f = NULL;
     t->r = NULL;
+    Tree record{};
+
+    int bin[MAX] {};
     for (k = 0; k < size; k++) {
         tree_temp = tree;
-        ExtractCodesFromFile(fd1);
+        ExtractCodesFromFile(fd1,record);
         int bin[MAX], bin_con[MAX];
         for (i = 0; i < MAX; i++) {
             bin[i] = bin_con[i] = 0;
@@ -226,62 +293,314 @@ void ReBuildHuffmanTree(int fd1, int size)
         tree_temp->r = NULL;
         tree_temp = tree;
     }
+    return tree; 
 }
 
-void decompressFile(int fd1, int fd2, int f)
+void decompressFile(int fd1, int fd2, int f, Tree* root)
 {
-    int inp[8], i, k = 0;
+    int k = 0;
     unsigned char p;
-    read(fd1, &p, sizeof(char));
-    convertDecimalToBinary(inp, p, 8);
-    tree_temp = tree;
-    for (i = 0; i < 8 && k < f; i++) {
-        if (!isroot(tree_temp)) {
-            if (i != 7) {
-                if (inp[i] == 0) {
-                    tree_temp = tree_temp->f;
-                }
-                if (inp[i] == 1) {
-                    tree_temp = tree_temp->r;
-                }
-            }
-            else {
-                if (inp[i] == 0) {
-                    tree_temp = tree_temp->f;
-                }
-                if (inp[i] == 1) {
-                    tree_temp = tree_temp->r;
-                }
-                if (read(fd1, &p, sizeof(char)) != 0) {
-                    convertDecimalToBinary(inp, p, 8);
-                    i = -1;
-                }
-                else {
-                    break;
-                }
+
+    if (f <= 0)
+        return;
+
+    // Check whether the Huffman tree exists
+    if (root == nullptr)
+    {
+        std::cerr << "Huffman tree is missing" << std::endl;
+        return;
+    }
+
+    // Start traversal from the reconstructed root
+    Tree* tree_temp = root;
+
+    // Handle a file containing only one unique character
+    if (isroot(root))
+    {
+        for (int i = 0; i < f; i++)
+        {
+            if (_write(fd2, &root->g, 1) != 1)
+            {
+                perror("Failed to write decompressed data");
+                return;
             }
         }
-        else {
-            k++;
-            write(fd2, &tree_temp->g, sizeof(char));
-            tree_temp = tree;
-            i--;
+
+        return;
+    }
+
+    while (k < f)
+    {
+        int bytesRead = _read(fd1, &p, 1);
+
+        if (bytesRead != 1)
+        {
+            std::cerr << "Failed to read compressed data\n";
+            return;
+        }
+
+        // Process each bit, starting from the MSB
+        for (int i = 7; i >= 0; i--)
+        {
+            int bit = (p >> i) & 1;
+
+            if (bit == 0)
+                tree_temp = tree_temp->f;
+            else
+                tree_temp = tree_temp->r;
+
+            if (tree_temp == nullptr)
+            {
+                std::cerr << "Invalid Huffman bitstream\n";
+                return;
+            }
+
+            // Check whether we reached a leaf
+            if (isroot(tree_temp))
+            {
+                if (_write(fd2, &tree_temp->g, 1) != 1)
+                {
+                    perror("Failed to write decompressed data");
+                    return;
+                }
+
+                k++;
+
+                // Start decoding the next character
+                tree_temp = root;
+
+                if (k == f)
+                    break;
+            }
         }
     }
 }
 
-void ExtractCodesFromFile(int fd1)
+bool ExtractCodesFromFile(int fd1, Tree& record)
 {
-    read(fd1, &t->g, sizeof(char));
-    read(fd1, &t->len, sizeof(int));
-    read(fd1, &t->dec, sizeof(int));
+    // Read the character
+    if (_read(fd1, &record.g, sizeof(char)) != sizeof(char))
+        return false;
+
+    // Read the Huffman code length
+    if (_read(fd1, &record.len, sizeof(int)) != sizeof(int))
+        return false;
+
+    // Read the decimal representation
+    if (_read(fd1, &record.dec, sizeof(int)) != sizeof(int))
+        return false;
+
+    return true;
 }
 
-void main() {
-using namespace std;
 
-int fd1{};
-int fd2{};
+int main()
+{
+    int choice;
+    using namespace std;
+    cout << "========== HUFFMAN COMPRESSOR ==========\n";
+    cout << "1. Compress a file\n";
+    cout << "2. Decompress a file\n";
+    cout << "Enter your choice: ";
 
-openFiles(fd1,fd2);
+    std::cin >> choice;
+
+    // =====================================
+    // COMPRESSION
+    // =====================================
+
+    if (choice == 1)
+    {
+        int fd1{};
+        int fd2{};
+
+        openFiles(fd1, fd2);
+
+        // STEP 1: Count frequencies
+
+        int frequencies[256]{};
+        int original_size = 0;
+
+        unsigned char ch;
+        int bytesRead;
+
+        while ((bytesRead = _read(fd1, &ch, 1)) == 1)
+        {
+            frequencies[ch]++;
+            original_size++;
+        }
+
+        if (bytesRead == -1)
+        {
+            perror("Failed to read input file");
+            _close(fd1);
+            _close(fd2);
+            return 1;
+        }
+
+        // STEP 2: Create character and frequency arrays
+
+        char arr[256];
+        int freq[256];
+
+        int unique_size = 0;
+
+        for (int i = 0; i < 256; i++)
+        {
+            if (frequencies[i] > 0)
+            {
+                arr[unique_size] = static_cast<char>(i);
+                freq[unique_size] = frequencies[i];
+
+                unique_size++;
+            }
+        }
+
+        if (unique_size < 2)
+        {
+            std::cerr << "Need at least two unique characters.\n";
+            _close(fd1);
+            _close(fd2);
+            return 1;
+        }
+
+        // STEP 3: Build Huffman tree
+
+        Node* root = buildHuffmanTree(arr, freq, unique_size);
+
+        if (root == nullptr)
+        {
+            std::cerr << "Failed to build Huffman tree.\n";
+            _close(fd1);
+            _close(fd2);
+            return 1;
+        }
+
+        // STEP 4: Write file metadata
+
+        _write(fd2, &original_size, sizeof(int));
+        _write(fd2, &unique_size, sizeof(int));
+
+        // STEP 5: Generate Huffman codes
+
+        int t[MAX]{};
+
+        front = nullptr;
+        rear = nullptr;
+
+        printCodesIntoFile(fd2, root, t, 0);
+
+        // STEP 6: Reset input file position
+
+        _lseek(fd1, 0, SEEK_SET);
+
+        // STEP 7: Compress file
+
+        compressFile(fd1, fd2, 0);
+
+        cout << "\nCompression completed!\n";
+
+        _close(fd1);
+        _close(fd2);
+    }
+
+    // =====================================
+    // DECOMPRESSION
+    // =====================================
+
+    else if (choice == 2)
+    {
+        // STEP 1: Open compressed file
+
+        int fd1 = _open(
+            "sample-compressed.txt",
+            _O_RDONLY | _O_BINARY
+        );
+
+        if (fd1 == -1)
+        {
+            perror("Failed to open compressed file");
+            return 1;
+        }
+
+        // STEP 2: Open output file
+
+        int fd2 = _open(
+            "sample-decompressed.txt",
+            _O_WRONLY | _O_CREAT | _O_TRUNC | _O_BINARY,
+            _S_IREAD | _S_IWRITE
+        );
+
+        if (fd2 == -1) {
+            perror("Failed to open output file");
+            _close(fd1);
+            return 1;
+        }
+
+        // STEP 3: Read original file size
+
+        int original_size;
+
+        if (_read(fd1, &original_size, sizeof(int)) != sizeof(int)) {
+            cerr << "Failed to read original file size\n";
+            _close(fd1);
+            _close(fd2);
+            return 1;
+        }
+
+        // STEP 4: Read unique character count
+
+        int unique_size;
+
+        if (_read(fd1, &unique_size, sizeof(int)) != sizeof(int)) {
+            cerr << "Failed to read unique character count\n";
+            _close(fd1);
+            _close(fd2);
+            return 1;
+        }
+
+        cout << "Original size: " << original_size << '\n';
+        cout << "Unique characters: " << unique_size << '\n';
+
+        // STEP 5: Rebuild Huffman tree
+
+        Tree* root = ReBuildHuffmanTree(fd1, unique_size);
+
+        if (root == nullptr) {
+            cerr << "Tree reconstruction failed!\n";
+            return 1;
+        }
+
+        cout << "Root: " << root << '\n';
+        cout << "Left child: " << root->f << '\n';
+        cout << "Right child: " << root->r << '\n';    
+
+        if (original_size > 0 && root == nullptr) {
+            cerr << "Failed to rebuild Huffman tree\n";
+            _close(fd1);
+            _close(fd2);
+            return 1;
+        }
+
+        // STEP 6: Decompress
+
+        decompressFile(fd1, fd2, original_size, root);
+
+        cout << "\nDecompression completed!\n";
+
+        // STEP 7: Destroy reconstructed tree
+
+        //destroyTree(root);
+
+        _close(fd1);
+        _close(fd2);
+    }
+
+    else
+    {
+        cout << "Invalid choice!\n";
+        return 1;
+    }
+
+    return 0;
 }
