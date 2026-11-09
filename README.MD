@@ -1,6 +1,6 @@
 # Huffman Compressor
 
-A Windows-based file compression and decompression utility written in C++ using Huffman Coding. The project implements a custom binary archive format, provides command-line functionality, and integrates directly with Windows File Explorer through right-click context menus.
+A Windows-based text-file compression and decompression utility written in C++ using Huffman Coding. The project implements a custom binary archive format, provides command-line functionality, and integrates directly with Windows File Explorer through right-click context menus.
 
 The long-term goal is to develop a standalone Windows compression utility with support for individual files, directories, and recursive folder structures.
 
@@ -35,7 +35,7 @@ The long-term goal is to develop a standalone Windows compression utility with s
 
 The application integrates with Windows File Explorer through its installer.
 
-- **Compress with Huffman Compressor:** Right-click any file to compress it.
+- **Compress with Huffman Compressor:** Right-click any text file to compress it.
 - **Extract with Huffman Compressor:** Right-click a `.huff` archive to extract it.
 - Double-click `.huff` archives to initiate extraction.
 - Custom `.huff` archive icon.
