@@ -283,4 +283,4 @@ HuffmanCompressor/
 
 ## License
 
-Add your chosen license here before publicly distributing the project.
+MIT License
