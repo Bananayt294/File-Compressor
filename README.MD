@@ -1,8 +1,8 @@
 # Huffman Compressor
 
-A Windows-based text-file compression and decompression utility written in C++ using Huffman Coding. The project implements a custom binary archive format, provides command-line functionality, and integrates directly with Windows File Explorer through right-click context menus.
+A Windows-based file compression and decompression utility written in C++ using Huffman coding. It supports individual regular files and integrates with Windows File Explorer through right-click context menus. Folder archive creation and extraction are still in development.
 
-The long-term goal is to develop a standalone Windows compression utility with support for individual files, directories, and recursive folder structures.
+Directory traversal is currently available for listing entries; it does not yet create a folder archive.
 
 ## Features
 
@@ -26,16 +26,17 @@ The long-term goal is to develop a standalone Windows compression utility with s
 ### Archive Management
 
 - Uses a custom `.huff` archive extension.
-- Generates compressed archive files from input files.
+- Generates compressed archive files from supported regular files.
 - Extracts files from existing archives.
 - Prevents accidental overwriting of existing files.
 - Opens a native Windows Save As dialog when an extracted filename already exists, allowing the user to choose a different destination filename.
+- Requires at least two distinct byte values in a file; empty files and files containing only one repeated byte cannot currently be compressed.
 
 ### Windows Integration
 
 The application integrates with Windows File Explorer through its installer.
 
-- **Compress with Huffman Compressor:** Right-click any text file to compress it.
+- **Compress with Huffman Compressor:** Right-click a supported regular file to compress it.
 - **Extract with Huffman Compressor:** Right-click a `.huff` archive to extract it.
 - Double-click `.huff` archives to initiate extraction.
 - Custom `.huff` archive icon.
@@ -127,6 +128,13 @@ Compress a file:
 .\compressor.exe compress "C:\path\to\file.txt"
 ```
 
+For a supported regular file, the command creates a `.huff` file beside the
+input. The current compressor requires at least two distinct byte values, so it
+cannot compress an empty file or one containing only a repeated byte.
+
+For a directory, the command lists its entries; it does not create a folder
+archive. Folder compression and extraction are still in development.
+
 Extract an archive:
 
 ```powershell
@@ -139,7 +147,7 @@ The application also provides an interactive console menu when launched without 
 
 The installer is built using Inno Setup.
 
-1. Open `HuffmanCompressor.iss` in Inno Setup.
+1. Open `HuffmannCompressor.iss` in Inno Setup.
 2. Ensure the latest compiled application executable is in the expected source directory.
 3. Compile the installer using `F9`.
 4. Locate the generated setup executable in the output directory.
@@ -265,7 +273,7 @@ HuffmanCompressor/
 │   └── HuffmanArchive.ico
 │
 ├── installer/
-│   └── HuffmanCompressor.iss
+│   └── HuffmannCompressor.iss
 │
 └── Output/
     └── HuffmanCompressorSetup.exe

@@ -893,6 +893,23 @@ int main(int argc, char* argv[])
 
     if (operation == "compress") {
 
+        std::error_code statusError;
+        const auto inputStatus = std::filesystem::symlink_status(filePath, statusError);
+
+        if (statusError) {
+            std::cerr << "Failed to inspect input path: " << statusError.message() << std::endl;
+            return 1;
+        }
+
+        if (std::filesystem::is_regular_file(inputStatus)) {
+            return compressFileFromPath(filePath);
+        }
+
+        if (!std::filesystem::is_directory(inputStatus)) {
+            std::cerr << "Input path is not a regular file or directory." << std::endl;
+            return 1;
+        }
+
         std::string errorMessage;
 
         auto entries = collectDirectoryEntries(filePath, errorMessage);
