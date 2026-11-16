@@ -2,7 +2,11 @@
 
 A Windows-based file compression and decompression utility written in C++ using Huffman coding. It supports individual regular files and integrates with Windows File Explorer through right-click context menus. Folder archive creation and extraction are still in development.
 
-Directory traversal is currently available for listing entries; it does not yet create a folder archive.
+> **Development notice:** Folder support is still under active development. For now, running `compressor.exe compress "<directory>"` only lists the directory's contents; it does not create an archive. This is expected behavior, not a bug. Compression of supported individual files is available.
+
+> **Compressing files:** When using the installed application, compress a supported file from File Explorer: right-click the file and select **Compress with Huffman Compressor**. The `.huff` archive is created beside the original file.
+
+> **Extracting files:** To extract a `.huff` archive with the installed application, right-click it in File Explorer and select **Extract with Huffman Compressor**. The original file is restored beside the archive; if it already exists, you can choose another location.
 
 ## Features
 
@@ -21,16 +25,18 @@ Directory traversal is currently available for listing entries; it does not yet 
 - Decodes the compressed bitstream.
 - Reconstructs the original file contents.
 - Validates archive metadata before attempting decompression.
-- Handles single-character edge cases.
 
 ### Archive Management
 
 - Uses a custom `.huff` archive extension.
 - Generates compressed archive files from supported regular files.
 - Extracts files from existing archives.
-- Prevents accidental overwriting of existing files.
+- Prevents overwriting existing files during extraction and offers a different output path if the destination already exists.
 - Opens a native Windows Save As dialog when an extracted filename already exists, allowing the user to choose a different destination filename.
 - Requires at least two distinct byte values in a file; empty files and files containing only one repeated byte cannot currently be compressed.
+- Uses 32-bit signed counters, so files near or above 2 GiB are not supported.
+- Overwrites an existing `<input>.huff` file when compressing that input.
+- Does not guarantee a smaller output; Huffman metadata can make some files larger.
 
 ### Windows Integration
 
@@ -141,9 +147,29 @@ Extract an archive:
 .\compressor.exe extract "C:\path\to\file.txt.huff"
 ```
 
-The application also provides an interactive console menu when launched without command-line arguments.
+Extraction writes `file.txt` beside `file.txt.huff`. If that output already
+exists, the application opens a Save As dialog instead of overwriting it.
 
-## Windows Installation
+The command-line interface requires an operation and a path. Launching the
+program without arguments does not currently show an interactive menu.
+
+## Installing and Using a Release
+
+1. Download `HuffmanCompressorSetup.exe` from the [latest GitHub release](https://github.com/Bananayt294/File-Compressor/releases/latest).
+2. Run the setup file. It installs for the current Windows user under `%LOCALAPPDATA%\Programs\Huffman Compressor` and does not require administrator privileges.
+3. In File Explorer, right-click a supported regular file and select **Compress with Huffman Compressor**. The resulting `.huff` file is created beside the original. If that archive already exists, it is overwritten.
+4. To extract, right-click a `.huff` file and select **Extract with Huffman Compressor**, or double-click the archive. The original filename is restored in the same folder; if it already exists, a Save As dialog lets you choose another path.
+
+The compressor cannot process empty files or files containing only one repeated byte. Folder compression is not available yet: the Explorer command applies to files, and passing a directory to the command-line `compress` operation only lists its entries.
+
+To use the installed program from PowerShell:
+
+```powershell
+& "$env:LOCALAPPDATA\Programs\Huffman Compressor\compressor.exe" compress "C:\path\to\file.txt"
+& "$env:LOCALAPPDATA\Programs\Huffman Compressor\compressor.exe" extract "C:\path\to\file.txt.huff"
+```
+
+## Building the Installer from Source
 
 The installer is built using Inno Setup.
 
