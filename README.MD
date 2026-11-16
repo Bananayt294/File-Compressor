@@ -1,51 +1,54 @@
 # Huffman Compressor
 
-A Windows-based file compression and decompression utility written in C++ using Huffman coding. It supports individual regular files and integrates with Windows File Explorer through right-click context menus. Folder archive creation and extraction are still in development.
+A Windows file compression and decompression utility written in C++ using Huffman coding. It supports individual files and integrates with Windows File Explorer through right-click context menus.
 
-> **Development notice:** Folder support is still under active development. For now, running `compressor.exe compress "<directory>"` only lists the directory's contents; it does not create an archive. This is expected behavior, not a bug. Compression of supported individual files is available.
+Folder compression and extraction are currently in development.
 
-> **Compressing files:** When using the installed application, compress a supported file from File Explorer: right-click the file and select **Compress with Huffman Compressor**. The `.huff` archive is created beside the original file.
+> **Development notice:** Folder support is not ready yet. Running `compressor.exe compress "<directory>"` currently lists the directory's contents without creating an archive. This is expected behavior. Compression and extraction of supported individual files are working.
 
-> **Extracting files:** To extract a `.huff` archive with the installed application, right-click it in File Explorer and select **Extract with Huffman Compressor**. The original file is restored beside the archive; if it already exists, you can choose another location.
+**Compressing a file:** Right-click a supported file in File Explorer and select **Compress with Huffman Compressor**. The resulting `.huff` archive is saved in the same directory as the original file.
+
+**Extracting an archive:** Right-click a `.huff` file and select **Extract with Huffman Compressor**, or double-click the archive. The extracted file is saved beside the archive. If a file with the same name already exists, you can choose a different location.
 
 ## Features
 
 ### Huffman Compression
 
-- Implements Huffman Coding for lossless data compression.
-- Builds a Huffman tree using a custom Min Heap.
+- Uses Huffman coding for lossless compression.
+- Builds the Huffman tree using a custom Min Heap.
 - Generates variable-length binary codes based on character frequencies.
-- Packs encoded bits into bytes for storage.
-- Stores the metadata required to reconstruct the Huffman tree during decompression.
-- Supports binary file I/O using Windows file APIs.
+- Packs encoded bits into bytes before writing them to the archive.
+- Stores the metadata needed to reconstruct the Huffman tree during extraction.
+- Uses Windows file APIs for binary file operations.
 
 ### Decompression
 
-- Reconstructs the Huffman tree from stored metadata.
+- Rebuilds the Huffman tree using the metadata stored in the archive.
 - Decodes the compressed bitstream.
-- Reconstructs the original file contents.
-- Validates archive metadata before attempting decompression.
+- Restores the original file contents.
+- Checks archive metadata before starting decompression.
 
 ### Archive Management
 
-- Uses a custom `.huff` archive extension.
-- Generates compressed archive files from supported regular files.
+- Uses the `.huff` file extension for compressed archives.
+- Creates archives from supported regular files.
 - Extracts files from existing archives.
-- Prevents overwriting existing files during extraction and offers a different output path if the destination already exists.
-- Opens a native Windows Save As dialog when an extracted filename already exists, allowing the user to choose a different destination filename.
-- Requires at least two distinct byte values in a file; empty files and files containing only one repeated byte cannot currently be compressed.
-- Uses 32-bit signed counters, so files near or above 2 GiB are not supported.
-- Overwrites an existing `<input>.huff` file when compressing that input.
-- Does not guarantee a smaller output; Huffman metadata can make some files larger.
+- Checks for existing files before extraction and lets the user choose another output path.
+- Opens the native Windows Save As dialog when the original filename already exists.
+- Uses exclusive file creation (`_O_EXCL`) to prevent existing files from being overwritten.
+- Currently requires at least two distinct byte values in the input. Empty files and files containing only one repeated byte cannot be compressed.
+- Uses 32-bit signed counters, so files close to or larger than 2 GiB are not supported.
+- Overwrites an existing `<input>.huff` archive when compressing the same input again.
+- Does not guarantee that every file will become smaller. For some files, the Huffman metadata can make the compressed archive larger than the original.
 
 ### Windows Integration
 
-The application integrates with Windows File Explorer through its installer.
+The installer adds the following options to Windows File Explorer:
 
-- **Compress with Huffman Compressor:** Right-click a supported regular file to compress it.
-- **Extract with Huffman Compressor:** Right-click a `.huff` archive to extract it.
-- Double-click `.huff` archives to initiate extraction.
-- Custom `.huff` archive icon.
+- **Compress with Huffman Compressor:** Compress a supported regular file.
+- **Extract with Huffman Compressor:** Extract a `.huff` archive.
+- Double-clicking a `.huff` file also starts extraction.
+- Custom icon for `.huff` archives.
 - Start Menu shortcuts.
 - Optional desktop shortcut.
 - Automatic uninstaller.
@@ -55,10 +58,10 @@ The application integrates with Windows File Explorer through its installer.
 The application is packaged using Inno Setup.
 
 - Installs under `%LOCALAPPDATA%\Programs\Huffman Compressor`.
-- Registers file associations and Windows context-menu commands.
+- Registers `.huff` file associations and Explorer context-menu commands.
 - Installs the custom archive icon.
 - Creates an uninstaller and registers the application with Windows.
-- Supports installation without administrator privileges.
+- Does not require administrator privileges.
 
 ## Technology Stack
 
@@ -75,52 +78,50 @@ The application is packaged using Inno Setup.
 
 ## How It Works
 
-### 1. Compression
+### Compression
 
-The compression process follows these steps:
+When compressing a file, the program:
 
 1. Opens the input file in binary mode.
-2. Reads the file and calculates the frequency of each character.
-3. Constructs a Min Heap using the character frequencies.
-4. Builds the Huffman tree by repeatedly extracting the two nodes with the lowest frequencies.
-5. Generates Huffman codes from the resulting tree.
-6. Stores the original file size, unique character count, and Huffman metadata.
+2. Reads the file and calculates the frequency of each byte.
+3. Builds a Min Heap using those frequencies.
+4. Constructs the Huffman tree by repeatedly extracting the two nodes with the lowest frequencies.
+5. Generates a Huffman code for each unique byte.
+6. Writes the original file size, number of unique byte values, and Huffman metadata to the archive.
 7. Encodes the input using the generated codes.
-8. Packs the encoded bits into bytes and writes them to the archive.
+8. Packs the resulting bits into bytes and writes them to the archive.
 
-### 2. Decompression
+### Decompression
 
-The decompression process reverses the encoding process:
+Extraction reverses the process:
 
 1. Opens the `.huff` archive.
-2. Reads the original file size and unique character count.
-3. Reconstructs the Huffman tree using the stored metadata.
+2. Reads the original file size and number of unique byte values.
+3. Reconstructs the Huffman tree from the stored metadata.
 4. Reads the compressed bitstream.
-5. Traverses the Huffman tree to decode the original characters.
-6. Writes the reconstructed contents to the output file.
+5. Traverses the tree to decode the original bytes.
+6. Writes the recovered contents to the output file.
 
-### 3. Preventing File Overwrites
+### Preventing File Overwrites
 
-During extraction, the application checks whether the intended output filename already exists.
+Before extracting an archive, the program checks whether the intended output filename already exists.
 
-If it does, the application opens the native Windows Save As dialog using `GetSaveFileNameW()`.
+If it does, the native Windows Save As dialog is opened using `GetSaveFileNameW()`. The user can choose another filename or cancel the operation.
 
-The user can select a different filename or cancel the extraction.
-
-File creation uses exclusive creation flags (`_O_EXCL`) to prevent an existing file from being overwritten, including in the event of a race between checking the filename and creating it.
+The program also uses exclusive file creation flags (`_O_EXCL`). This prevents an existing file from being overwritten, even if it is created after the initial filename check.
 
 ## Building From Source
 
 ### Requirements
 
 - Windows
-- C++20-compatible compiler
+- A C++20-compatible compiler
 - MSYS2 UCRT64 / MinGW-w64 G++
 - Windows Common Dialog library (`comdlg32`)
 
 ### Compilation
 
-From the source directory:
+Run the following command from the source directory:
 
 ```bash
 g++ -std=c++20 -O2 compressor.cpp -o compressor.exe -lcomdlg32
@@ -128,72 +129,74 @@ g++ -std=c++20 -O2 compressor.cpp -o compressor.exe -lcomdlg32
 
 ### Command-Line Usage
 
-Compress a file:
+**Compress a file:**
 
 ```powershell
 .\compressor.exe compress "C:\path\to\file.txt"
 ```
 
-For a supported regular file, the command creates a `.huff` file beside the
-input. The current compressor requires at least two distinct byte values, so it
-cannot compress an empty file or one containing only a repeated byte.
+The resulting `.huff` archive is created beside the input file.
 
-For a directory, the command lists its entries; it does not create a folder
-archive. Folder compression and extraction are still in development.
+The current implementation requires at least two distinct byte values. Empty files and files containing only one repeated byte are not supported.
 
-Extract an archive:
+Passing a directory to the `compress` command only lists its entries. It does not create a folder archive yet.
+
+**Extract an archive:**
 
 ```powershell
 .\compressor.exe extract "C:\path\to\file.txt.huff"
 ```
 
-Extraction writes `file.txt` beside `file.txt.huff`. If that output already
-exists, the application opens a Save As dialog instead of overwriting it.
+The program extracts the contents to `file.txt` beside the archive. If that file already exists, it opens the Save As dialog so another output path can be selected.
 
-The command-line interface requires an operation and a path. Launching the
-program without arguments does not currently show an interactive menu.
+The command-line interface currently expects an operation and a path. Running the executable without arguments does not open an interactive menu.
 
 ## Installing and Using a Release
 
 1. Download `HuffmanCompressorSetup.exe` from the [latest GitHub release](https://github.com/Bananayt294/File-Compressor/releases/latest).
-2. Run the setup file. It installs for the current Windows user under `%LOCALAPPDATA%\Programs\Huffman Compressor` and does not require administrator privileges.
-3. In File Explorer, right-click a supported regular file and select **Compress with Huffman Compressor**. The resulting `.huff` file is created beside the original. If that archive already exists, it is overwritten.
-4. To extract, right-click a `.huff` file and select **Extract with Huffman Compressor**, or double-click the archive. The original filename is restored in the same folder; if it already exists, a Save As dialog lets you choose another path.
+2. Run the installer. The application is installed for the current Windows user under `%LOCALAPPDATA%\Programs\Huffman Compressor`. Administrator privileges are not required.
+3. To compress a file, right-click it in File Explorer and select **Compress with Huffman Compressor**. The `.huff` archive will be created in the same directory. An existing archive with the same name will be overwritten.
+4. To extract an archive, right-click the `.huff` file and select **Extract with Huffman Compressor**, or double-click it. The original filename is restored in the archive's directory. If that filename already exists, the Save As dialog lets you choose another path.
 
-The compressor cannot process empty files or files containing only one repeated byte. Folder compression is not available yet: the Explorer command applies to files, and passing a directory to the command-line `compress` operation only lists its entries.
+A few things to keep in mind:
 
-To use the installed program from PowerShell:
+- Empty files cannot currently be compressed.
+- Files containing only one repeated byte cannot currently be compressed.
+- Files close to or above 2 GiB are not supported.
+- Folder compression and extraction are still in development.
+- The Explorer compression command is intended for individual files. Passing a directory to the command-line `compress` operation only lists its contents.
+
+You can also run the installed program directly from PowerShell:
 
 ```powershell
 & "$env:LOCALAPPDATA\Programs\Huffman Compressor\compressor.exe" compress "C:\path\to\file.txt"
+
 & "$env:LOCALAPPDATA\Programs\Huffman Compressor\compressor.exe" extract "C:\path\to\file.txt.huff"
 ```
 
-## Building the Installer from Source
+## Building the Installer
 
-The installer is built using Inno Setup.
+The installer is built with Inno Setup.
 
 1. Open `HuffmannCompressor.iss` in Inno Setup.
-2. Ensure the latest compiled application executable is in the expected source directory.
-3. Compile the installer using `F9`.
-4. Locate the generated setup executable in the output directory.
+2. Make sure the latest compiled `compressor.exe` is in the source directory expected by the script.
+3. Press `F9` to compile the installer.
+4. Find the generated setup executable in the output directory.
 
-The installer is generated as:
+The output is organized as follows:
 
 ```text
 Output/
 └── HuffmanCompressorSetup.exe
 ```
 
-The Inno Setup script handles application installation, Windows registry integration, file associations, shortcuts, and uninstallation.
+The Inno Setup script takes care of installing the application, registering the file association and Explorer commands, creating shortcuts, and configuring the uninstaller.
 
-## Folder Compression and Extraction — In Development
+## Folder Compression and Extraction
 
-The next major feature is support for compressing and extracting entire directories while preserving their original directory structures.
+Folder support is the next major part of the project. The goal is to compress an entire directory into a single archive while keeping its directory structure intact when extracted.
 
-The intended behaviour is:
-
-**Input directory:**
+For example, given this directory:
 
 ```text
 MyFolder/
@@ -206,13 +209,13 @@ MyFolder/
     └── config.txt
 ```
 
-**Expected archive:**
+The expected archive is:
 
 ```text
 MyFolder.huff
 ```
 
-**Expected extracted structure:**
+After extraction, the original structure should be restored:
 
 ```text
 MyFolder/
@@ -227,34 +230,34 @@ MyFolder/
 
 ### Current Progress
 
-- [x] Recursive directory traversal using `std::filesystem`.
-- [x] Collecting files and directories.
-- [x] Generating relative paths.
-- [x] Preserving empty directory entries during traversal.
-- [x] Detecting and rejecting symbolic links.
-- [x] Defining archive magic bytes and format version.
-- [x] Defining archive entry types.
-- [x] Implementing raw binary read/write helpers.
-- [x] Implementing 32-bit and 64-bit integer serialization.
-- [x] Implementing length-prefixed string serialization.
+The directory traversal and basic archive I/O components are already in place.
 
-### Planned Work
+- [x] Recursive directory traversal using `std::filesystem`.
+- [x] Collection of files and directories.
+- [x] Generation of relative paths.
+- [x] Preservation of empty directory entries during traversal.
+- [x] Detection and rejection of symbolic links.
+- [x] Archive magic bytes and format version definitions.
+- [x] Archive entry type definitions.
+- [x] Raw binary read/write helpers.
+- [x] 32-bit and 64-bit integer serialization.
+- [x] Length-prefixed string serialization.
+
+### Remaining Work
 
 - [ ] Implement archive header serialization and validation.
-- [ ] Implement directory and file entry serialization.
-- [ ] Integrate the existing Huffman compressor with the directory archive format.
-- [ ] Compress multiple files into a single archive.
-- [ ] Implement recursive directory reconstruction during extraction.
-- [ ] Add validation against malformed archives and unsafe extraction paths.
+- [ ] Serialize directory and file entries.
+- [ ] Connect the existing Huffman compressor to the folder archive format.
+- [ ] Compress multiple files into one archive.
+- [ ] Recreate directory structures during extraction.
+- [ ] Validate archives against malformed data and unsafe extraction paths.
 - [ ] Handle empty files, empty directories, and existing destination files.
 - [ ] Add folder compression and extraction to the command-line interface.
-- [ ] Integrate folder operations into Windows File Explorer.
+- [ ] Add folder operations to the Windows File Explorer context menu.
 
 ### Proposed Archive Format
 
-The folder archive will use a custom binary container.
-
-The proposed structure is:
+The folder archive will use a custom binary format:
 
 ```text
 Folder Archive
@@ -278,15 +281,13 @@ Folder Archive
 └── Additional Entries...
 ```
 
-Each file will be compressed independently using the existing Huffman implementation.
+Each file will be compressed separately using the existing Huffman implementation. This keeps the compression code reusable and allows files to be decoded independently.
 
-This approach allows individual files to be decoded independently and keeps the existing compression algorithm reusable.
-
-The folder archive will also use its own magic header and version identifier to distinguish it from the existing single-file archive format.
+The folder archive will have its own magic header and version identifier, separate from the existing single-file archive format.
 
 ## Project Structure
 
-The intended project organization is:
+The project is intended to follow this structure:
 
 ```text
 HuffmanCompressor/
@@ -307,8 +308,10 @@ HuffmanCompressor/
 
 ## Future Improvements
 
+There are still a few things planned for the project:
+
 - Recursive folder compression and extraction.
-- Improved compression statistics and reporting.
+- Compression statistics and reporting.
 - Progress tracking for large files and directories.
 - Compression ratio reporting.
 - Additional archive integrity checks.
